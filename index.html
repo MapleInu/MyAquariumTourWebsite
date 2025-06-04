@@ -1,0 +1,54 @@
+// データの保存と読み込み（localStorage版）
+const STORAGE_KEY = 'aquarium_data_v1';
+
+function saveToStorage() {
+    try {
+        const dataToSave = {
+            aquariums: aquariums,
+            nextId: nextAquariumId,
+            timestamp: Date.now()
+        };
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(dataToSave));
+        console.log('データをlocalStorageに保存しました:', aquariums.length, '件');
+        return true;
+    } catch (e) {
+        console.warn('データの保存に失敗しました:', e);
+        return false;
+    }
+}
+
+function loadFromStorage() {
+    try {
+        const saved = localStorage.getItem(STORAGE_KEY);
+        if (saved) {
+            const data = JSON.parse(saved);
+            if (data.aquariums && Array.isArray(data.aquariums)) {
+                // 既存のデータとマージ
+                data.aquariums.forEach(savedAquarium => {
+                    const existing = aquariums.find(a => a.id === savedAquarium.id);
+                    if (existing) {
+                        // 既存の水族館のコメントと写真を更新
+                        existing.comment = savedAquarium.comment || '';
+                        existing.photo = savedAquarium.photo || null;
+                    } else if (savedAquarium.id >= 9) {
+                        // 新しく追加された水族館を追加
+                        aquariums.push(savedAquarium);
+                    }
+                });
+                if (data.nextId) {
+                    nextAquariumId = data.nextId;
+                }
+                console.log('データをlocalStorageから読み込みました');
+                return true;
+            }
+        }
+        return false;
+    } catch (e) {
+        console.warn('データの読み込みに失敗しました:', e);
+        return false;
+    }
+}
+
+// 使用箇所での変更
+// saveToMemory() → saveToStorage()
+// loadFromMemory() → loadFromStorage()
