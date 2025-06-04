@@ -491,6 +491,148 @@
             transform: translateY(-2px);
         }
         
+        .delete-controls {
+            display: none;
+            margin-top: 1rem;
+            padding-top: 1rem;
+            border-top: 2px solid #ecf0f1;
+        }
+        
+        .delete-controls.visible {
+            display: block;
+        }
+        
+        .delete-btn {
+            background: linear-gradient(45deg, #e74c3c, #c0392b);
+            color: white;
+            border: none;
+            padding: 0.6rem 1.2rem;
+            border-radius: 20px;
+            cursor: pointer;
+            font-size: 0.9rem;
+            margin: 0.3rem;
+            transition: all 0.3s ease;
+        }
+        
+        .delete-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(231, 76, 60, 0.4);
+        }
+        
+        .delete-btn.photo-delete {
+            background: linear-gradient(45deg, #f39c12, #e67e22);
+        }
+        
+        .delete-btn.aquarium-delete {
+            background: linear-gradient(45deg, #8e44ad, #732d91);
+            font-weight: 600;
+        }
+        
+        .delete-btn:disabled {
+            background: #bdc3c7;
+            cursor: not-allowed;
+            transform: none;
+            box-shadow: none;
+        }
+        
+        .aquarium-item {
+            position: relative;
+        }
+        
+        .aquarium-delete-btn {
+            position: absolute;
+            top: 0.5rem;
+            right: 0.5rem;
+            background: rgba(231, 76, 60, 0.8);
+            color: white;
+            border: none;
+            border-radius: 50%;
+            width: 25px;
+            height: 25px;
+            cursor: pointer;
+            font-size: 0.8rem;
+            display: none;
+            transition: all 0.3s ease;
+        }
+        
+        .aquarium-delete-btn.visible {
+            display: block;
+        }
+        
+        .aquarium-delete-btn:hover {
+            background: rgba(231, 76, 60, 1);
+            transform: scale(1.1);
+        }
+        
+        .confirm-dialog {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.8);
+            display: none;
+            justify-content: center;
+            align-items: center;
+            z-index: 1001;
+        }
+        
+        .confirm-dialog.active {
+            display: flex;
+        }
+        
+        .confirm-content {
+            background: white;
+            border-radius: 20px;
+            padding: 2rem;
+            max-width: 400px;
+            width: 90%;
+            text-align: center;
+            animation: modalAppear 0.3s ease-out;
+        }
+        
+        .confirm-content h3 {
+            color: #e74c3c;
+            margin-bottom: 1rem;
+            font-size: 1.3rem;
+        }
+        
+        .confirm-content p {
+            color: #2c3e50;
+            margin-bottom: 1.5rem;
+            line-height: 1.5;
+        }
+        
+        .confirm-buttons {
+            display: flex;
+            gap: 1rem;
+            justify-content: center;
+        }
+        
+        .confirm-btn {
+            padding: 0.8rem 1.5rem;
+            border: none;
+            border-radius: 25px;
+            cursor: pointer;
+            font-size: 1rem;
+            transition: all 0.3s ease;
+            min-width: 100px;
+        }
+        
+        .confirm-btn.danger {
+            background: linear-gradient(45deg, #e74c3c, #c0392b);
+            color: white;
+        }
+        
+        .confirm-btn.safe {
+            background: #ecf0f1;
+            color: #7f8c8d;
+        }
+        
+        .confirm-btn:hover {
+            transform: translateY(-2px);
+        }
+        
         .auth-status {
             position: fixed;
             top: 20px;
@@ -797,8 +939,57 @@
                 gap: 0.5rem;
             }
             
-            .form-btn {
+            .delete-controls {
                 padding: 0.8rem;
+                border-radius: 10px;
+            }
+            
+            .delete-btn {
+                padding: 0.5rem 1rem;
+                font-size: 0.8rem;
+                margin: 0.2rem;
+                display: block;
+                width: 100%;
+            }
+            
+            .aquarium-delete-btn {
+                width: 20px;
+                height: 20px;
+                font-size: 0.7rem;
+                top: 0.3rem;
+                right: 0.3rem;
+            }
+            
+            .confirm-content {
+                width: 95%;
+                padding: 1.5rem;
+            }
+            
+            .confirm-buttons {
+                flex-direction: column;
+                gap: 0.5rem;
+            }
+            
+            .confirm-btn {
+                padding: 0.8rem;
+                font-size: 0.9rem;
+            }
+            
+            .stats-grid {
+                grid-template-columns: 1fr;
+                gap: 0.8rem;
+            }
+            
+            .stat-item {
+                padding: 0.8rem;
+                border-radius: 10px;
+            }
+            
+            .stat-number {
+                font-size: 1.3rem;
+            }
+            
+            .stat-label {
                 font-size: 0.9rem;
             }
             
@@ -922,6 +1113,18 @@
                     <div class="edit-controls" id="comment-controls">
                         <button class="save-btn" onclick="saveData()">💾 保存</button>
                     </div>
+                    <div class="delete-controls" id="delete-controls">
+                        <h4 style="color: #e74c3c; margin-bottom: 0.5rem;">🗑️ 削除オプション</h4>
+                        <button class="delete-btn photo-delete" onclick="deletePhoto()" id="photo-delete-btn" disabled>
+                            📸 写真を削除
+                        </button>
+                        <button class="delete-btn" onclick="deleteComment()" id="comment-delete-btn" disabled>
+                            💭 コメントを削除
+                        </button>
+                        <button class="delete-btn aquarium-delete" onclick="deleteAquarium()" id="aquarium-delete-btn" disabled>
+                            🏛️ この水族館を完全削除
+                        </button>
+                    </div>
                 </div>
             </div>
         </div>
@@ -936,6 +1139,18 @@
             <div class="auth-buttons">
                 <button class="auth-btn primary" onclick="authenticate()">ログイン</button>
                 <button class="auth-btn secondary" onclick="closeAuth()">キャンセル</button>
+            </div>
+        </div>
+    </div>
+    
+    <!-- 削除確認ダイアログ -->
+    <div class="confirm-dialog" id="confirm-dialog">
+        <div class="confirm-content">
+            <h3>⚠️ 削除確認</h3>
+            <p id="confirm-message">本当に削除しますか？</p>
+            <div class="confirm-buttons">
+                <button class="confirm-btn safe" onclick="cancelDelete()">キャンセル</button>
+                <button class="confirm-btn danger" onclick="confirmDelete()" id="confirm-delete-btn">削除</button>
             </div>
         </div>
     </div>
@@ -1272,9 +1487,17 @@
                 const item = document.createElement('div');
                 item.className = 'aquarium-item';
                 item.onclick = () => selectAquarium(aquarium.id);
+                
+                // 削除ボタンは追加された水族館（ID >= 9）にのみ表示
+                const deleteButton = aquarium.id >= 9 ? 
+                    `<button class="aquarium-delete-btn ${isAuthenticated ? 'visible' : ''}" 
+                            onclick="event.stopPropagation(); deleteAquariumFromList(${aquarium.id})" 
+                            title="この水族館を削除">×</button>` : '';
+                
                 item.innerHTML = `
                     <h3>${aquarium.name}</h3>
                     <div class="location">${aquarium.location}</div>
+                    ${deleteButton}
                 `;
                 container.appendChild(item);
             });
@@ -1312,7 +1535,38 @@
                 photoPreview.innerHTML = '写真をアップロードしてください';
             }
 
+            // 削除ボタンの状態を更新
+            updateDeleteButtons(aquarium);
+
             document.getElementById('detail-panel').classList.add('active');
+        }
+        
+        // 削除ボタンの状態更新
+        function updateDeleteButtons(aquarium) {
+            const deleteControls = document.getElementById('delete-controls');
+            const photoDeleteBtn = document.getElementById('photo-delete-btn');
+            const commentDeleteBtn = document.getElementById('comment-delete-btn');
+            const aquariumDeleteBtn = document.getElementById('aquarium-delete-btn');
+            
+            if (isAuthenticated) {
+                deleteControls.classList.add('visible');
+                
+                // 写真削除ボタン
+                photoDeleteBtn.disabled = !aquarium.photo;
+                
+                // コメント削除ボタン
+                commentDeleteBtn.disabled = !aquarium.comment || aquarium.comment.trim() === '';
+                
+                // 水族館削除ボタン（追加された水族館のみ削除可能）
+                aquariumDeleteBtn.disabled = aquarium.id < 9;
+                if (aquarium.id < 9) {
+                    aquariumDeleteBtn.textContent = '🏛️ 元からある水族館（削除不可）';
+                } else {
+                    aquariumDeleteBtn.textContent = '🏛️ この水族館を完全削除';
+                }
+            } else {
+                deleteControls.classList.remove('visible');
+            }
         }
 
         // 詳細パネル閉じる
@@ -1424,6 +1678,11 @@
                 if (textarea) {
                     textarea.removeAttribute('readonly');
                 }
+                
+                // 削除ボタンの状態を更新
+                if (currentAquarium) {
+                    updateDeleteButtons(currentAquarium);
+                }
             } else {
                 statusElement.innerHTML = '閲覧モード';
                 statusElement.style.background = 'rgba(255, 255, 255, 0.95)';
@@ -1450,6 +1709,12 @@
                 
                 if (textarea) {
                     textarea.setAttribute('readonly', 'readonly');
+                }
+                
+                // 削除コントロールを非表示
+                const deleteControls = document.getElementById('delete-controls');
+                if (deleteControls) {
+                    deleteControls.classList.remove('visible');
                 }
             }
         }
@@ -1588,6 +1853,135 @@
                 // ボタンを元に戻す
                 addBtn.textContent = '追加';
                 addBtn.disabled = false;
+            }
+        }
+        
+        // 削除機能
+        let deleteAction = null;
+        let deleteTargetId = null;
+        
+        function deletePhoto() {
+            if (!currentAquarium || !isAuthenticated) return;
+            
+            deleteAction = 'photo';
+            showConfirmDialog(
+                `📸 写真を削除しますか？\n\n${currentAquarium.name}の写真が削除されます。`,
+                '写真を削除'
+            );
+        }
+        
+        function deleteComment() {
+            if (!currentAquarium || !isAuthenticated) return;
+            
+            deleteAction = 'comment';
+            showConfirmDialog(
+                `💭 コメントを削除しますか？\n\n${currentAquarium.name}のコメントが削除されます。`,
+                'コメントを削除'
+            );
+        }
+        
+        function deleteAquarium() {
+            if (!currentAquarium || !isAuthenticated || currentAquarium.id < 9) return;
+            
+            deleteAction = 'aquarium';
+            deleteTargetId = currentAquarium.id;
+            showConfirmDialog(
+                `🏛️ 水族館を完全削除しますか？\n\n「${currentAquarium.name}」と関連するすべてのデータ（写真・コメント）が削除されます。\n\n⚠️ この操作は取り消せません。`,
+                '水族館を削除'
+            );
+        }
+        
+        function deleteAquariumFromList(aquariumId) {
+            if (!isAuthenticated) {
+                showAuth();
+                return;
+            }
+            
+            const aquarium = aquariums.find(a => a.id === aquariumId);
+            if (!aquarium || aquarium.id < 9) return;
+            
+            deleteAction = 'aquarium';
+            deleteTargetId = aquariumId;
+            showConfirmDialog(
+                `🏛️ 水族館を完全削除しますか？\n\n「${aquarium.name}」と関連するすべてのデータ（写真・コメント）が削除されます。\n\n⚠️ この操作は取り消せません。`,
+                '水族館を削除'
+            );
+        }
+        
+        function showConfirmDialog(message, buttonText) {
+            document.getElementById('confirm-message').textContent = message;
+            document.getElementById('confirm-delete-btn').textContent = buttonText;
+            document.getElementById('confirm-dialog').classList.add('active');
+        }
+        
+        function cancelDelete() {
+            document.getElementById('confirm-dialog').classList.remove('active');
+            deleteAction = null;
+            deleteTargetId = null;
+        }
+        
+        async function confirmDelete() {
+            if (!deleteAction) return;
+            
+            try {
+                switch (deleteAction) {
+                    case 'photo':
+                        if (currentAquarium) {
+                            currentAquarium.photo = null;
+                            const photoPreview = document.getElementById('photo-preview');
+                            photoPreview.innerHTML = '写真をアップロードしてください';
+                            updateDeleteButtons(currentAquarium);
+                            await saveToStorage();
+                            alert('📸 写真を削除しました。');
+                        }
+                        break;
+                        
+                    case 'comment':
+                        if (currentAquarium) {
+                            currentAquarium.comment = '';
+                            document.getElementById('comment-textarea').value = '';
+                            updateDeleteButtons(currentAquarium);
+                            await saveToStorage();
+                            alert('💭 コメントを削除しました。');
+                        }
+                        break;
+                        
+                    case 'aquarium':
+                        const targetAquarium = aquariums.find(a => a.id === deleteTargetId);
+                        if (targetAquarium && targetAquarium.id >= 9) {
+                            // 水族館をリストから削除
+                            const index = aquariums.findIndex(a => a.id === deleteTargetId);
+                            if (index !== -1) {
+                                aquariums.splice(index, 1);
+                            }
+                            
+                            // 地図からマーカーを削除
+                            const markerIndex = markers.findIndex(m => 
+                                m.getLatLng().lat === targetAquarium.lat && 
+                                m.getLatLng().lng === targetAquarium.lng
+                            );
+                            if (markerIndex !== -1) {
+                                map.removeLayer(markers[markerIndex]);
+                                markers.splice(markerIndex, 1);
+                            }
+                            
+                            // UIを更新
+                            renderAquariumList();
+                            updateStats();
+                            closeDetail();
+                            await saveToStorage();
+                            
+                            alert(`🏛️ ${targetAquarium.name}を削除しました。`);
+                        }
+                        break;
+                }
+                
+                updateStats();
+                cancelDelete();
+                
+            } catch (error) {
+                alert('❌ 削除に失敗しました。もう一度お試しください。');
+                console.error('削除エラー:', error);
             }
         }
         
