@@ -1112,6 +1112,7 @@
                     <textarea id="comment-textarea" placeholder="この水族館での思い出や感想を書いてください..." readonly></textarea>
                     <div class="edit-controls" id="comment-controls">
                         <button class="save-btn" onclick="saveData()">💾 保存</button>
+                        <button class="upload-btn" onclick="exportData()" style="margin-top: 0.5rem;">📤 データ書き出し</button>
                     </div>
                     <div class="delete-controls" id="delete-controls">
                         <h4 style="color: #e74c3c; margin-bottom: 0.5rem;">🗑️ 削除オプション</h4>
@@ -1203,8 +1204,8 @@
         class AquariumDataSync {
             constructor() {
                 // TODO: 後で設定するトークンとGist ID
-                this.GITHUB_TOKEN = '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';
-                this.GIST_ID = 'https://gist.github.com/MapleInu/11b815b75931d89ea278e59bedc59718';
+                this.GITHUB_TOKEN = ''; // 後で設定
+                this.GIST_ID = ''; // 後で設定
                 this.SYNC_INTERVAL = 30000; // 30秒ごと
             }
 
@@ -1263,12 +1264,19 @@
                 if (!this.GIST_ID) return;
                 
                 setInterval(async () => {
-                    const gistData = await this.loadFromGist();
-                    if (gistData && this.shouldUpdate(gistData)) {
-                        this.mergeData(gistData);
-                        console.log('🔄 データを自動同期しました');
+                    try {
+                        const gistData = await this.loadFromGist();
+                        if (gistData && this.shouldUpdate(gistData)) {
+                            console.log('🔄 リモートデータを検出、同期開始');
+                            this.mergeData(gistData);
+                            console.log('🔄 データを自動同期しました');
+                        }
+                    } catch (error) {
+                        console.error('自動同期エラー:', error);
                     }
                 }, this.SYNC_INTERVAL);
+                
+                console.log('🔄 自動同期を開始しました (30秒間隔)');
             }
 
             shouldUpdate(remoteData) {
@@ -1277,14 +1285,33 @@
             }
 
             mergeData(remoteData) {
+                let hasChanges = false;
+                
                 if (remoteData.aquariums) {
                     remoteData.aquariums.forEach(remoteAquarium => {
                         const existing = aquariums.find(a => a.id === remoteAquarium.id);
                         if (existing) {
-                            existing.comment = remoteAquarium.comment || '';
-                            existing.photo = remoteAquarium.photo || null;
+                            // 既存水族館の更新
+                            if (existing.comment !== remoteAquarium.comment || existing.photo !== remoteAquarium.photo) {
+                                existing.comment = remoteAquarium.comment || '';
+                                existing.photo = remoteAquarium.photo || null;
+                                hasChanges = true;
+                                console.log(`同期更新: ${existing.name}`);
+                            }
                         } else {
+                            // 新しい水族館の追加
                             aquariums.push(remoteAquarium);
+                            hasChanges = true;
+                            console.log(`同期追加: ${remoteAquarium.name} (ID: ${remoteAquarium.id})`);
+                            
+                            // 地図にマーカーを追加
+                            if (typeof map !== 'undefined' && map) {
+                                const marker = L.marker([remoteAquarium.lat, remoteAquarium.lng])
+                                    .addTo(map)
+                                    .bindPopup(`<b>${remoteAquarium.name}</b><br>${remoteAquarium.location}`)
+                                    .on('click', () => selectAquarium(remoteAquarium.id));
+                                markers.push(marker);
+                            }
                         }
                     });
                     
@@ -1292,8 +1319,22 @@
                         nextAquariumId = Math.max(nextAquariumId, remoteData.nextId);
                     }
                     
-                    renderAquariumList();
-                    updateStats();
+                    if (hasChanges) {
+                        // UIを更新
+                        renderAquariumList();
+                        updateStats();
+                        
+                        // ローカルストレージも更新
+                        localStorage.setItem(STORAGE_KEY, JSON.stringify({
+                            aquariums: aquariums,
+                            nextId: nextAquariumId,
+                            timestamp: remoteData.timestamp
+                        }));
+                        
+                        console.log('🔄 UI更新完了');
+                    }
+                    
+                    // 同期時刻を更新
                     localStorage.setItem('last_sync_timestamp', remoteData.timestamp);
                 }
             }
@@ -1344,20 +1385,27 @@
                 }
                 
                 if (data && data.aquariums && Array.isArray(data.aquariums)) {
+                    console.log('読み込み前の水族館数:', aquariums.length);
+                    
                     data.aquariums.forEach(savedAquarium => {
                         const existing = aquariums.find(a => a.id === savedAquarium.id);
                         if (existing) {
+                            // 既存の水族館のコメントと写真を更新
                             existing.comment = savedAquarium.comment || '';
                             existing.photo = savedAquarium.photo || null;
+                            console.log(`水族館更新: ${existing.name} - コメント:${!!existing.comment}, 写真:${!!existing.photo}`);
                         } else if (savedAquarium.id >= 9) {
+                            // 新しく追加された水族館を追加
                             aquariums.push(savedAquarium);
+                            console.log(`新しい水族館追加: ${savedAquarium.name} (ID: ${savedAquarium.id})`);
                         }
                     });
                     
                     if (data.nextId) {
-                        nextAquariumId = data.nextId;
+                        nextAquariumId = Math.max(nextAquariumId, data.nextId);
                     }
                     
+                    console.log('読み込み後の水族館数:', aquariums.length);
                     console.log('データを読み込みました');
                     return true;
                 }
@@ -1985,6 +2033,38 @@
             }
         }
         
+        // データエクスポート機能
+        function exportData() {
+            try {
+                const dataToExport = {
+                    aquariums: aquariums,
+                    nextId: nextAquariumId,
+                    timestamp: Date.now()
+                };
+                
+                // クリップボードにコピー
+                const dataString = JSON.stringify(dataToExport, null, 2);
+                navigator.clipboard.writeText(dataString).then(() => {
+                    alert('📤 データをクリップボードにコピーしました！\n\nGitHub Gistにペーストしてください。');
+                }).catch(() => {
+                    // フォールバック: テキストエリアに表示
+                    const popup = window.open('', 'データエクスポート', 'width=600,height=400');
+                    popup.document.write(`
+                        <html>
+                        <head><title>水族館データ</title></head>
+                        <body>
+                            <h3>以下をコピーしてGitHub Gistに貼り付けてください：</h3>
+                            <textarea style="width:100%;height:300px;">${dataString}</textarea>
+                        </body>
+                        </html>
+                    `);
+                });
+            } catch (error) {
+                alert('❌ データの書き出しに失敗しました。');
+                console.error('エクスポートエラー:', error);
+            }
+        }
+        
         // Enterキーでログイン
         document.addEventListener('keydown', function(e) {
             if (e.key === 'Enter' && document.getElementById('auth-overlay').classList.contains('active')) {
@@ -2008,10 +2088,17 @@
                 }
             });
 
-            document.getElementById('photos-count').textContent = photosCount;
-            document.getElementById('comments-count').textContent = commentsCount;
-            document.querySelector('.stat-item .stat-number').textContent = totalCount;
-            document.querySelectorAll('.stat-item .stat-number')[1].textContent = prefectures.size;
+            // 統計を更新
+            const statNumbers = document.querySelectorAll('.stat-number');
+            if (statNumbers.length >= 4) {
+                statNumbers[0].textContent = totalCount;
+                statNumbers[1].textContent = prefectures.size;
+                statNumbers[2].textContent = photosCount;
+                statNumbers[3].textContent = commentsCount;
+            }
+            
+            // デバッグ情報
+            console.log(`📊 統計更新: 水族館${totalCount}件, 写真${photosCount}件, コメント${commentsCount}件`);
         }
 
         // 初期化（Leafletライブラリの読み込み完了を待つ）
