@@ -1666,7 +1666,7 @@
         }
 
         // 写真アップロード処理
-        document.getElementById('photo-input').addEventListener('change', function(e) {
+        document.getElementById('photo-input').addEventListener('change', async function(e) {
             if (!isAuthenticated) {
                 showAuth();
                 return;
@@ -1675,7 +1675,7 @@
             const file = e.target.files[0];
             if (file && currentAquarium) {
                 const reader = new FileReader();
-                reader.onload = function(e) {
+                reader.onload = async function(e) {
                     const photoPreview = document.getElementById('photo-preview');
                     photoPreview.innerHTML = `<img src="${e.target.result}" alt="${currentAquarium.name}">`;
                     currentAquarium.photo = e.target.result;
