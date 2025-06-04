@@ -1112,7 +1112,7 @@
                     <textarea id="comment-textarea" placeholder="この水族館での思い出や感想を書いてください..." readonly></textarea>
                     <div class="edit-controls" id="comment-controls">
                         <button class="save-btn" onclick="saveData()">💾 保存</button>
-                        <button class="upload-btn" onclick="exportData()" style="margin-top: 0.5rem;">📤 データ書き出し</button>
+                        <button class="upload-btn" onclick="manualSync()" style="margin-top: 0.5rem; background: linear-gradient(45deg, #3498db, #2980b9);">🔄 今すぐ同期</button>
                     </div>
                     <div class="delete-controls" id="delete-controls">
                         <h4 style="color: #e74c3c; margin-bottom: 0.5rem;">🗑️ 削除オプション</h4>
@@ -1203,9 +1203,9 @@
         // GitHub Gist連携クラス
         class AquariumDataSync {
             constructor() {
-                // TODO: 後で設定するトークンとGist ID
+                // GitHub Gist設定
                 this.GITHUB_TOKEN = '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';
-                this.GIST_ID = 'https://gist.github.com/MapleInu/11b815b75931d89ea278e59bedc59718';
+                this.GIST_ID = '11b815b75931d89ea278e59bedc59718';
                 this.SYNC_INTERVAL = 30000; // 30秒ごと
             }
 
@@ -1261,22 +1261,36 @@
             }
 
             startAutoSync() {
-                if (!this.GIST_ID) return;
+                if (!this.GIST_ID) {
+                    console.log('ℹ️ Gist設定後に自動同期が開始されます');
+                    return;
+                }
                 
+                // 初回同期
+                this.performSync();
+                
+                // 定期同期
                 setInterval(async () => {
-                    try {
-                        const gistData = await this.loadFromGist();
-                        if (gistData && this.shouldUpdate(gistData)) {
-                            console.log('🔄 リモートデータを検出、同期開始');
-                            this.mergeData(gistData);
-                            console.log('🔄 データを自動同期しました');
-                        }
-                    } catch (error) {
-                        console.error('自動同期エラー:', error);
-                    }
+                    this.performSync();
                 }, this.SYNC_INTERVAL);
                 
                 console.log('🔄 自動同期を開始しました (30秒間隔)');
+            }
+            
+            async performSync() {
+                try {
+                    const gistData = await this.loadFromGist();
+                    if (gistData && this.shouldUpdate(gistData)) {
+                        console.log('🔄 他端末からの更新を検出、同期開始');
+                        this.mergeData(gistData);
+                        console.log('🔄 データを自動同期しました');
+                    }
+                } catch (error) {
+                    // エラーは静かに処理（コンソールスパム防止）
+                    if (error.message.includes('rate limit')) {
+                        console.warn('⏳ API制限のため同期を一時停止');
+                    }
+                }
             }
 
             shouldUpdate(remoteData) {
@@ -1291,12 +1305,15 @@
                     remoteData.aquariums.forEach(remoteAquarium => {
                         const existing = aquariums.find(a => a.id === remoteAquarium.id);
                         if (existing) {
-                            // 既存水族館の更新
-                            if (existing.comment !== remoteAquarium.comment || existing.photo !== remoteAquarium.photo) {
+                            // 既存水族館の更新（空文字も保持）
+                            const commentChanged = existing.comment !== (remoteAquarium.comment || '');
+                            const photoChanged = existing.photo !== (remoteAquarium.photo || null);
+                            
+                            if (commentChanged || photoChanged) {
                                 existing.comment = remoteAquarium.comment || '';
                                 existing.photo = remoteAquarium.photo || null;
                                 hasChanges = true;
-                                console.log(`同期更新: ${existing.name}`);
+                                console.log(`同期更新: ${existing.name} - コメント:"${existing.comment}"`);
                             }
                         } else {
                             // 新しい水族館の追加
@@ -1332,6 +1349,10 @@
                         }));
                         
                         console.log('🔄 UI更新完了');
+                        
+                        // 詳細ログでコメント数を確認
+                        const commentsCount = aquariums.filter(a => a.comment && a.comment.trim()).length;
+                        console.log(`📊 同期後のコメント数: ${commentsCount}`);
                     }
                     
                     // 同期時刻を更新
@@ -1357,9 +1378,16 @@
                 // ローカルストレージに保存
                 localStorage.setItem(STORAGE_KEY, JSON.stringify(dataToSave));
                 
-                // 編集権限がある場合はGistにも保存
-                if (isAuthenticated) {
-                    await dataSync.saveToGist(dataToSave);
+                // 編集権限がある場合は自動でGistにも保存
+                if (isAuthenticated && dataSync.GITHUB_TOKEN && dataSync.GIST_ID) {
+                    const gistSuccess = await dataSync.saveToGist(dataToSave);
+                    if (gistSuccess) {
+                        console.log('🌐 クラウドに自動保存されました - 他端末で利用可能');
+                    } else {
+                        console.warn('⚠️ クラウド保存に失敗 - ローカル保存のみ');
+                    }
+                } else if (isAuthenticated) {
+                    console.log('ℹ️ Gist設定を完了すると他端末と自動同期されます');
                 }
                 
                 console.log('データを保存しました:', aquariums.length, '件');
@@ -1390,10 +1418,14 @@
                     data.aquariums.forEach(savedAquarium => {
                         const existing = aquariums.find(a => a.id === savedAquarium.id);
                         if (existing) {
-                            // 既存の水族館のコメントと写真を更新
-                            existing.comment = savedAquarium.comment || '';
-                            existing.photo = savedAquarium.photo || null;
-                            console.log(`水族館更新: ${existing.name} - コメント:${!!existing.comment}, 写真:${!!existing.photo}`);
+                            // 既存の水族館のコメントと写真を更新（空文字でも保持）
+                            if (savedAquarium.comment !== undefined) {
+                                existing.comment = savedAquarium.comment;
+                            }
+                            if (savedAquarium.photo !== undefined) {
+                                existing.photo = savedAquarium.photo;
+                            }
+                            console.log(`水族館更新: ${existing.name} - コメント:"${existing.comment}", 写真:${!!existing.photo}`);
                         } else if (savedAquarium.id >= 9) {
                             // 新しく追加された水族館を追加
                             aquariums.push(savedAquarium);
@@ -1407,6 +1439,13 @@
                     
                     console.log('読み込み後の水族館数:', aquariums.length);
                     console.log('データを読み込みました');
+                    
+                    // 読み込み完了後に統計を更新
+                    setTimeout(() => {
+                        updateStats();
+                        console.log('📊 読み込み後の統計更新完了');
+                    }, 100);
+                    
                     return true;
                 }
                 return false;
@@ -1641,9 +1680,10 @@
                     photoPreview.innerHTML = `<img src="${e.target.result}" alt="${currentAquarium.name}">`;
                     currentAquarium.photo = e.target.result;
                     
-                    const success = saveToStorage(); // 写真も自動保存
+                    // 写真も自動でクラウドに保存
+                    const success = await saveToStorage();
                     if (success) {
-                        console.log('写真保存完了:', currentAquarium.name);
+                        console.log('📸 写真を自動保存しました:', currentAquarium.name);
                     }
                     updateStats();
                 };
@@ -1652,7 +1692,7 @@
         });
 
         // データ保存
-        function saveData() {
+        async function saveData() {
             if (!currentAquarium || !isAuthenticated) {
                 showAuth();
                 return;
@@ -1661,7 +1701,7 @@
             const comment = document.getElementById('comment-textarea').value;
             currentAquarium.comment = comment;
             
-            const success = saveToStorage(); // データを保存
+            const success = await saveToStorage(); // 自動でGistにも保存
             if (success) {
                 alert('💾 データが保存されました！');
                 console.log('コメント保存完了:', currentAquarium.name, '-', comment.substring(0, 50) + '...');
@@ -2065,6 +2105,32 @@
             }
         }
         
+        // 手動同期機能
+        async function manualSync() {
+            if (!isAuthenticated) {
+                showAuth();
+                return;
+            }
+            
+            try {
+                console.log('🔄 手動同期を開始...');
+                
+                // リモートから最新データを取得
+                const remoteData = await dataSync.loadFromGist();
+                
+                if (remoteData) {
+                    // データをマージ
+                    dataSync.mergeData(remoteData);
+                    alert('🔄 最新データを同期しました！');
+                } else {
+                    alert('⚠️ リモートデータが見つかりませんでした。\n\n以下を確認してください：\n- Personal Access Tokenの設定\n- Gist IDの設定\n- インターネット接続');
+                }
+            } catch (error) {
+                alert('❌ 同期に失敗しました。\n\n' + error.message);
+                console.error('手動同期エラー:', error);
+            }
+        }
+        
         // Enterキーでログイン
         document.addEventListener('keydown', function(e) {
             if (e.key === 'Enter' && document.getElementById('auth-overlay').classList.contains('active')) {
@@ -2118,6 +2184,13 @@
                 
                 // 自動同期を開始（Gist設定がある場合）
                 dataSync.startAutoSync();
+                
+                // 初期化完了後に統計を再計算
+                setTimeout(() => {
+                    renderAquariumList();
+                    updateStats();
+                    console.log('🔄 初期化完了後のUI更新');
+                }, 500);
                 
                 // デバッグ情報
                 console.log('🐠 水族館サイトが初期化されました');
